@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Video Receiver with Object Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            max-width: 1400px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .content {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        
+        .qr-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-width: 300px;
+        }
+        
+        .video-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-width: 500px;
+        }
+        
+        .detection-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-width: 300px;
+        }
+        
+        #qrcode {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px auto;
+            display: inline-block;
+            min-height: 256px;
+            min-width: 256px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .video-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        
+        #remoteVideo {
+            width: auto;
+            max-width: 640px;
+            height: auto;
+            border-radius: 10px;
+            background: #000;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            display: block;
+        }
+        
+        #detectionCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            border-radius: 10px;
+            pointer-events: none;
+        }
+        
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .status.waiting {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid #ffc107;
+            color: #ffc107;
+        }
+        
+        .status.connected {
+            background: rgba(40, 167, 69, 0.2);
+            border: 1px solid #28a745;
+            color: #28a745;
+        }
+        
+        .status.error {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid #dc3545;
+            color: #dc3545;
+        }
+        
+        .status.detecting {
+            background: rgba(138, 43, 226, 0.2);
+            border: 1px solid #8a2be2;
+            color: #8a2be2;
+        }
+        
+        .peer-id {
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        
+        .instructions {
+            margin-top: 20px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        .control-group {
+            margin: 15px 0;
+            text-align: left;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .control-group input, .control-group select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .control-group input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .backend-toggle {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        
+        .toggle-btn {
+            flex: 1;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .toggle-btn.active {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .detection-stats {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: left;
+        }
+        
+        .detection-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .detection-item {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .qr-fallback {
+            color: #333;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .qr-url {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 WebRTC + AI Object Detection</h1>
+        
+        <div class="content">
+            <div class="qr-section">
+                <h2>📷 Connect Your Phone</h2>
+                <div id="status" class="status waiting">Initializing...</div>
+                <div id="qrcode">
+                    <div class="qr-fallback">Generating QR Code...</div>
+                </div>
+                <div class="peer-id">
+                    <strong>Peer ID:</strong> <span id="peerId">Generating...</span>
+                </div>
+                <div id="mobileUrl" class="qr-url" style="display: none;"></div>
+                <div class="instructions">
+                    <p>1. Scan the QR code with your phone</p>
+                    <p>2. Allow camera access</p>
+                    <p>3. AI will detect objects in real-time!</p>
+                </div>
+            </div>
+            
+            <div class="video-section">
+                <h2>📺 Live Video Feed + AI Detection</h2>
+                <div class="video-container">
+                    <video id="remoteVideo" autoplay playsinline muted></video>
+                    <canvas id="detectionCanvas"></canvas>
+                </div>
+                <div id="videoStatus" class="status waiting">Waiting for connection...</div>
+                <div id="detectionStatus" class="status waiting">AI Model: Loading...</div>
+            </div>
+            
+            <div class="detection-section">
+                <h2>🎯 Detection Controls</h2>
+                
+                <!-- Backend Selection -->
+                <div class="model-selector">
+                    <h3>Processing Backend</h3>
+                    <div class="backend-toggle">
+                        <button class="toggle-btn" id="pythonBackend" onclick="setBackend('python')">Python + ONNX</button>
+                        <button class="toggle-btn active" id="jsBackend" onclick="setBackend('js')">JavaScript + TensorFlow.js</button>
+                    </div>
+                    
+                    <div class="control-group" id="modelSelection">
+                        <label for="modelSelect">Model:</label>
+                        <select id="modelSelect" onchange="changeModel()">
+                            <option value="coco-ssd">COCO-SSD (TensorFlow.js)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="confidenceThreshold">Confidence Threshold:</label>
+                        <input type="range" id="confidenceThreshold" min="0.1" max="1" step="0.1" value="0.5">
+                        <span id="confidenceValue">0.5</span>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="detectionMode">Detection Mode:</label>
+                        <select id="detectionMode">
+                            <option value="continuous">Continuous</option>
+                            <option value="interval">Every 2 seconds</option>
+                            <option value="manual">Manual only</option>
+                        </select>
+                    </div>
+                    
+                    <button id="toggleDetection" onclick="toggleDetection()">Start Detection</button>
+                    <button id="manualDetect" onclick="runSingleDetection()" disabled>Detect Now</button>
+                </div>
+                
+                <div class="detection-stats">
+                    <h3>📊 Detection Stats</h3>
+                    <div>Objects Found: <span id="objectCount">0</span></div>
+                    <div>FPS: <span id="detectionFPS">0</span></div>
+                    <div>Processing Time: <span id="processingTime">0ms</span></div>
+                    <div>Backend: <span id="currentBackend">JavaScript + TensorFlow.js</span></div>
+                    <div>Model: <span id="currentModel">COCO-SSD</span></div>
+                </div>
+                
+                <div class="detection-list" id="detectionList">
+                    <div class="detection-item">No objects detected yet...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- TensorFlow.js and COCO-SSD -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
+    
+    <!-- Socket.IO for Python backend communication -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <!-- QR Code Generator -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    
+    <!-- PeerJS -->
+    <script src="https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js"></script>
+    
+    <script>
+        let peer;
+        let conn;
+        let currentUrl = '';
+        let model;
+        let tfliteModel;
+        let isDetecting = false;
+        let detectionInterval;
+        let lastDetectionTime = 0;
+        let frameCount = 0;
+        let startTime = Date.now();
+        
+        // Detection variables
+        const video = document.getElementById('remoteVideo');
+        const canvas = document.getElementById('detectionCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Backend switching variables
+        let currentBackend = 'js'; // Default to JavaScript backend
+        let socket = null;
+        let availableModels = [];
+        
+        // Load TensorFlow.js model
+        async function loadModel() {
+            try {
+                updateDetectionStatus('Loading AI model...', 'waiting');
+                model = await cocoSsd.load();
+                updateDetectionStatus('AI Model Ready! 🤖', 'connected');
+                document.getElementById('toggleDetection').disabled = false;
+                console.log('COCO-SSD model loaded successfully');
+            } catch (error) {
+                console.error('Error loading model:', error);
+                updateDetectionStatus('Failed to load AI model', 'error');
+            }
+        }
+        
+        // Initialize PeerJS
+        function initializePeer() {
+            try {
+                peer = new Peer({
+                    debug: 2,
+                    config: {
+                        iceServers: [
+                            { urls: 'stun:stun.cloudflare.com:3478' },
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:stun1.l.google.com:19302' }
+                        ]
+                    }
+                });
+                
+                peer.on('open', function(id) {
+                    console.log('My peer ID is: ' + id);
+                    document.getElementById('peerId').textContent = id;
+                    
+                    const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '').replace(/\/$/, '');
+                    currentUrl = `${baseUrl}/mobile.html?peer=${id}`;
+                    
+                    const urlDiv = document.getElementById('mobileUrl');
+                    urlDiv.innerHTML = `<strong>Mobile URL:</strong><br>${currentUrl}`;
+                    urlDiv.style.display = 'block';
+                    
+                    generateQRCode(currentUrl);
+                    updateStatus('Ready! Scan QR code to connect', 'waiting');
+                });
+                
+                peer.on('call', function(call) {
+                    console.log('Receiving call...');
+                    updateStatus('Incoming call...', 'connected');
+                    updateVideoStatus('Connecting...', 'waiting');
+                    
+                    call.answer();
+                    
+                    call.on('stream', function(remoteStream) {
+                        console.log('Received remote stream');
+                        video.srcObject = remoteStream;
+                        
+                        video.onloadedmetadata = () => {
+                            // Wait for video to be fully loaded and displayed
+                            setTimeout(() => {
+                                // Set canvas to match the actual displayed video size
+                                canvas.width = video.offsetWidth;
+                                canvas.height = video.offsetHeight;
+                                canvas.style.width = video.offsetWidth + 'px';
+                                canvas.style.height = video.offsetHeight + 'px';
+                                
+                                console.log(`Video display size: ${video.offsetWidth}x${video.offsetHeight}`);
+                                console.log(`Video intrinsic size: ${video.videoWidth}x${video.videoHeight}`);
+                            }, 100);
+                        };
+                        
+                        updateStatus('Connected! 🎉', 'connected');
+                        updateVideoStatus('Live feed active! 📹', 'connected');
+                        
+                        // Auto-start detection if model is ready
+                        if (model && !isDetecting) {
+                            setTimeout(() => {
+                                if (document.getElementById('detectionMode').value === 'continuous') {
+                                    startDetection();
+                                }
+                            }, 1000);
+                        }
+                    });
+                    
+                    call.on('close', function() {
+                        console.log('Call ended');
+                        stopDetection();
+                        updateStatus('Call ended. Scan QR to reconnect', 'waiting');
+                        updateVideoStatus('Waiting for connection...', 'waiting');
+                        video.srcObject = null;
+                        clearCanvas();
+                    });
+                    
+                    call.on('error', function(err) {
+                        console.error('Call error:', err);
+                        updateStatus('Connection error: ' + err.message, 'error');
+                        updateVideoStatus('Connection failed', 'error');
+                    });
+                });
+                
+                peer.on('error', function(err) {
+                    console.error('Peer error:', err);
+                    updateStatus('Error: ' + err.message, 'error');
+                    if (currentUrl) showManualUrl();
+                });
+                
+            } catch (error) {
+                console.error('Failed to initialize peer:', error);
+                updateStatus('Failed to initialize connection', 'error');
+            }
+        }
+        
+        // Object Detection Functions
+        async function detectObjects() {
+            if (!video.srcObject || video.videoWidth === 0) return;
+            
+            const startTime = performance.now();
+            
+            try {
+                if (currentBackend === 'python') {
+                    if (!socket || !socket.connected) {
+                        console.error('Python backend not connected');
+                        updateDetectionStatus('Python backend not connected', 'error');
+                        return;
+                    }
+                    await detectWithPython();
+                } else if (model) {
+                    await detectWithCocoSSD();
+                } else {
+                    console.error('No model loaded for current backend');
+                    return;
+                }
+            } catch (error) {
+                console.error('Detection error:', error);
+            }
+        }
+        
+        async function detectWithCocoSSD() {
+            const predictions = await model.detect(video);
+            const processingTime = Math.round(performance.now() - performance.now());
+            
+            drawDetections(predictions);
+            updateDetectionStats(predictions, processingTime);
+        }
+        
+        async function detectWithPython() {
+            // Capture frame from video
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = video.videoWidth;
+            tempCanvas.height = video.videoHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(video, 0, 0);
+            
+            const imageData = tempCanvas.toDataURL('image/jpeg', 0.8);
+            const confidence = parseFloat(document.getElementById('confidenceThreshold').value);
+            
+            // Send frame to Python backend via Socket.IO
+            socket.emit('video_frame', {
+                frame: imageData,
+                confidence: confidence,
+                timestamp: Date.now()
+            });
+        }
+        
+        function drawDetections(predictions) {
+            // Clear previous drawings
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const confidenceThreshold = parseFloat(document.getElementById('confidenceThreshold').value);
+            
+            // Calculate scaling factors from video intrinsic size to displayed size
+            const scaleX = canvas.width / video.videoWidth;
+            const scaleY = canvas.height / video.videoHeight;
+            
+            console.log(`Canvas: ${canvas.width}x${canvas.height}, Video: ${video.videoWidth}x${video.videoHeight}`);
+            console.log(`Scale factors: ${scaleX}, ${scaleY}`);
+            
+            predictions.forEach(prediction => {
+                const confidence = prediction.score || prediction.confidence;
+                
+                if (confidence >= confidenceThreshold) {
+                    const [x, y, width, height] = prediction.bbox;
+                    
+                    // Scale coordinates to match displayed video size
+                    const scaledX = x * scaleX;
+                    const scaledY = y * scaleY;
+                    const scaledWidth = width * scaleX;
+                    const scaledHeight = height * scaleY;
+                    
+                    console.log(`Original bbox: [${x}, ${y}, ${width}, ${height}]`);
+                    console.log(`Scaled bbox: [${scaledX}, ${scaledY}, ${scaledWidth}, ${scaledHeight}]`);
+                    
+                    // Draw bounding box
+                    ctx.strokeStyle = '#00ff00';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+                    
+                    // Draw label background
+                    const label = `${prediction.class} (${Math.round(confidence * 100)}%)`;
+                    ctx.font = '14px Arial';
+                    const textWidth = ctx.measureText(label).width;
+                    
+                    ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+                    ctx.fillRect(scaledX, scaledY - 20, textWidth + 8, 20);
+                    
+                    // Draw label text
+                    ctx.fillStyle = '#000000';
+                    ctx.fillText(label, scaledX + 4, scaledY - 4);
+                }
+            });
+        }
+        
+        function updateDetectionStats(predictions, processingTime) {
+            const confidenceThreshold = parseFloat(document.getElementById('confidenceThreshold').value);
+            // Handle both score and confidence properties
+            const validPredictions = predictions.filter(p => (p.score || p.confidence) >= confidenceThreshold);
+            
+            document.getElementById('objectCount').textContent = validPredictions.length;
+            document.getElementById('processingTime').textContent = processingTime + 'ms';
+            
+            // Calculate FPS
+            frameCount++;
+            const elapsed = (Date.now() - startTime) / 1000;
+            const fps = Math.round(frameCount / elapsed);
+            document.getElementById('detectionFPS').textContent = fps;
+            
+            // Update detection list
+            const detectionList = document.getElementById('detectionList');
+            if (validPredictions.length > 0) {
+                detectionList.innerHTML = validPredictions.map(p => {
+                    const confidence = p.score || p.confidence;
+                    return `<div class="detection-item">${p.class}: ${Math.round(confidence * 100)}%</div>`;
+                }).join('');
+            } else {
+                detectionList.innerHTML = '<div class="detection-item">No objects detected...</div>';
+            }
+        }
+        
+        function startDetection() {
+            if (!model || isDetecting) return;
+            
+            isDetecting = true;
+            document.getElementById('toggleDetection').textContent = 'Stop Detection';
+            document.getElementById('manualDetect').disabled = true;
+            updateDetectionStatus('Detecting objects...', 'detecting');
+            
+            const mode = document.getElementById('detectionMode').value;
+            
+            if (mode === 'continuous') {
+                function detectLoop() {
+                    if (isDetecting) {
+                        detectObjects();
+                        requestAnimationFrame(detectLoop);
+                    }
+                }
+                detectLoop();
+            } else if (mode === 'interval') {
+                detectionInterval = setInterval(detectObjects, 2000);
+            }
+        }
+        
+        function stopDetection() {
+            isDetecting = false;
+            document.getElementById('toggleDetection').textContent = 'Start Detection';
+            document.getElementById('manualDetect').disabled = false;
+            updateDetectionStatus('Detection stopped', 'waiting');
+            
+            if (detectionInterval) {
+                clearInterval(detectionInterval);
+                detectionInterval = null;
+            }
+            
+            clearCanvas();
+        }
+        
+        function toggleDetection() {
+            if (isDetecting) {
+                stopDetection();
+            } else {
+                startDetection();
+            }
+        }
+        
+        function runSingleDetection() {
+            if (model && !isDetecting) {
+                detectObjects();
+            }
+        }
+        
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        // Backend switching functions
+        function setBackend(backend) {
+            currentBackend = backend;
+            
+            // Update UI
+            document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+            if (backend === 'python') {
+                document.getElementById('pythonBackend').classList.add('active');
+                document.getElementById('currentBackend').textContent = 'Python + ONNX';
+                initializeSocketIO();
+                loadAvailableModels();
+            } else {
+                document.getElementById('jsBackend').classList.add('active');
+                document.getElementById('currentBackend').textContent = 'JavaScript + TensorFlow.js';
+                if (socket) {
+                    socket.disconnect();
+                    socket = null;
+                }
+            }
+            
+            // Update model selection based on backend
+            updateModelSelection();
+            
+            // Stop current detection if running
+            if (isDetecting) {
+                stopDetection();
+            }
+        }
+        
+        function updateModelSelection() {
+            const modelSelect = document.getElementById('modelSelect');
+            modelSelect.innerHTML = '';
+            
+            if (currentBackend === 'python') {
+                // ONNX models for Python backend
+                const onnxModels = [
+                    { value: 'mobilenet_ssd', label: 'MobileNet-SSD (ONNX)' },
+                    { value: 'yolov5', label: 'YOLOv5 (ONNX)' }
+                ];
+                
+                onnxModels.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.value;
+                    option.textContent = model.label;
+                    modelSelect.appendChild(option);
+                });
+                
+                document.getElementById('currentModel').textContent = 'MobileNet-SSD';
+            } else {
+                // JavaScript models
+                const jsModels = [
+                    { value: 'coco-ssd', label: 'COCO-SSD (TensorFlow.js)' }
+                ];
+                
+                jsModels.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.value;
+                    option.textContent = model.label;
+                    modelSelect.appendChild(option);
+                });
+                
+                document.getElementById('currentModel').textContent = 'COCO-SSD';
+            }
+        }
+        
+        function changeModel() {
+            const selectedModel = document.getElementById('modelSelect').value;
+            
+            if (currentBackend === 'python') {
+                fetch(`http://localhost:5000/api/models/${selectedModel}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('currentModel').textContent = selectedModel.toUpperCase();
+                        console.log('Model changed to:', selectedModel);
+                    } else {
+                        console.error('Failed to change model:', data.error);
+                        alert('Failed to change model: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error changing model:', error);
+                    alert('Error connecting to Python backend. Make sure the server is running.');
+                });
+            } else {
+                // Handle JavaScript model switching
+                document.getElementById('currentModel').textContent = selectedModel.toUpperCase();
+                if (selectedModel === 'coco-ssd') {
+                    loadModel(); // Load COCO-SSD
+                }
+            }
+        }
+        
+        function loadAvailableModels() {
+            fetch('http://localhost:5000/api/models')
+                .then(response => response.json())
+                .then(data => {
+                    availableModels = data.models;
+                    console.log('Available models:', availableModels);
+                    console.log('Current model:', data.current);
+                })
+                .catch(error => {
+                    console.error('Error loading available models:', error);
+                });
+        }
+        
+        function initializeSocketIO() {
+            if (typeof io !== 'undefined') {
+                try {
+                    socket = io('http://localhost:5000', {
+                        transports: ['websocket', 'polling'],
+                        timeout: 5000
+                    });
+                    
+                    socket.on('connect', () => {
+                        console.log('Connected to Python backend');
+                        updateDetectionStatus('Python backend connected ✓', 'connected');
+                    });
+                    
+                    socket.on('detection_result', (data) => {
+                        console.log('Received detection result:', data);
+                        drawDetections(data.detections);
+                        updateDetectionStats(data.detections, data.processing_time);
+                    });
+                    
+                    socket.on('disconnect', () => {
+                        console.log('Disconnected from Python backend');
+                        updateDetectionStatus('Python backend disconnected', 'error');
+                    });
+                    
+                    socket.on('connect_error', (error) => {
+                        console.error('Socket.IO connection error:', error);
+                        updateDetectionStatus('Failed to connect to Python backend', 'error');
+                    });
+                } catch (error) {
+                    console.error('Error initializing Socket.IO:', error);
+                    updateDetectionStatus('Socket.IO initialization failed', 'error');
+                }
+            } else {
+                console.warn('Socket.IO not available. Python backend features disabled.');
+                updateDetectionStatus('Socket.IO not available - refresh page', 'error');
+            }
+        }
+        
+        // QR Code Generation
+        function generateQRCode(url) {
+            const qrContainer = document.getElementById('qrcode');
+            
+            try {
+                console.log('Generating QR code for:', url);
+                
+                const qr = qrcode(0, 'M');
+                qr.addData(url);
+                qr.make();
+                
+                const qrImage = qr.createImgTag(4, 8);
+                qrContainer.innerHTML = qrImage;
+                
+                console.log('QR Code generated successfully!');
+                
+            } catch (error) {
+                console.error('QR Code generation failed:', error);
+                showManualUrl();
+            }
+        }
+        
+        function showManualUrl() {
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = `
+                <div class="qr-fallback">
+                    <p><strong>QR Code unavailable</strong></p>
+                    <p>Manually open this URL on your phone:</p>
+                    <div style="background: #f0f0f0; padding: 10px; border-radius: 5px; word-break: break-all; color: #333; font-family: monospace; font-size: 0.8em;">
+                        ${currentUrl}
+                    </div>
+                    <p><small>Copy this URL and paste it in your phone's browser</small></p>
+                </div>
+            `;
+        }
+        
+        function updateStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function updateVideoStatus(message, type) {
+            const statusEl = document.getElementById('videoStatus');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function updateDetectionStatus(message, type) {
+            const statusEl = document.getElementById('detectionStatus');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        // Event Listeners
+        document.getElementById('confidenceThreshold').addEventListener('input', function(e) {
+            document.getElementById('confidenceValue').textContent = e.target.value;
+        });
+        
+        document.getElementById('detectionMode').addEventListener('change', function(e) {
+            if (isDetecting) {
+                stopDetection();
+            }
+            
+            const manualBtn = document.getElementById('manualDetect');
+            manualBtn.disabled = e.target.value !== 'manual' || isDetecting;
+        });
+        
+        // Debug function
+        function debugLibraries() {
+            console.log('=== Library Debug Info ===');
+            console.log('qrcode available:', typeof qrcode !== 'undefined');
+            console.log('Peer available:', typeof Peer !== 'undefined');
+            console.log('TensorFlow available:', typeof tf !== 'undefined');
+            console.log('COCO-SSD available:', typeof cocoSsd !== 'undefined');
+            console.log('Current URL:', currentUrl);
+            console.log('========================');
+        }
+        
+        // Initialize everything
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                debugLibraries();
+                initializePeer();
+                loadModel();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
