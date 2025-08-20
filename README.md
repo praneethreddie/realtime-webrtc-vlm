@@ -13,6 +13,10 @@ A real-time object detection system that streams video from your phone to a brow
 
 ## Quick Start
 
+run start.bat file in windows platform.
+
+it runs every thing use cloudflare tunneled url to acces the output
+
 ### One-Command Start (Docker)
 
 ```bash
@@ -124,3 +128,102 @@ The system automatically collects and displays:
 - **Detection Accuracy**: Confidence scores and object counts
 
 ## Architecture
+
+┌─────────────┐    WebRTC     ┌─────────────┐
+│   Mobile    │◄─────────────►│   Browser   │
+│   Camera    │               │  (Desktop)  │
+└─────────────┘               └─────────────┘
+│
+Socket.IO/HTTP
+│
+┌─────────────┐
+│   Python    │
+│   Backend   │
+│ (Detection) │
+└─────────────┘
+│
+RESTful API
+│
+┌─────────────┐
+│   Flask     │
+│   App       │
+└─────────────┘
+│
+WebSocket
+│
+│   SocketIO  │
+
+
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Camera not working on mobile**
+   - Ensure HTTPS connection (required for camera access)
+   - Check camera permissions in browser settings
+
+2. **High latency**
+   - Use Python backend for faster processing
+   - Reduce video resolution on mobile
+   - Check network connection quality
+
+3. **Detection accuracy issues**
+   - Adjust confidence threshold
+   - Ensure good lighting conditions
+   - Try different detection models
+
+### Performance Optimization
+
+- **Low-resource mode**: Automatically reduces processing when system resources are limited
+- **Backpressure handling**: Skips frames when processing can't keep up
+- **Model selection**: Choose appropriate model based on hardware capabilities
+
+## Development
+
+### Project Structure
+
+realtime-webrtc-vlm/
+├── frontend/
+│   ├── index.html          # Desktop browser interface
+│   └── mobile.html         # Mobile camera interface
+├── backend/
+│   ├── app.py              # Flask backend
+│   ├── requirements.txt    # Python dependencies
+│   ├── download_models.py  # Model download script
+│   └── models/            # Pre-trained models
+├── Dockerfile.backend      # Backend container
+├── Dockerfile.frontend     # Frontend container
+├── docker-compose.yml      # Container orchestration
+├── nginx.conf             # Nginx configuration
+├── start.sh               # Linux/Mac startup script
+├── start.bat              # Windows startup script
+├── benchmark.py           # Benchmarking script
+├── analyze_metrics.py     # Metrics analysis
+└── README.md              # Documentation
+
+
+### Adding New Models
+
+1. Add model download logic to `backend/download_models.py`
+2. Implement detection function in `backend/app.py`
+3. Update model selection in frontend interface
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details
+
+## Acknowledgments
+
+- TensorFlow.js team for client-side ML capabilities
+- ONNX Runtime for optimized model inference
+- PeerJS for simplified WebRTC implementation
+- Ultralytics for YOLO model implementations
