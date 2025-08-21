@@ -48,6 +48,8 @@ cd ..
 
 REM Start frontend server
 echo 🌐 Starting frontend server...
+cd frontend
+
 start "Frontend Server" python -m http.server 8080
 
 REM Wait for frontend to start

@@ -2,7 +2,7 @@ flask
 flask-cors
 flask-socketio
 opencv-python
-numpy
+numpy>=1.21.0,<2.0.0
 ultralytics
 tensorflow
 pillow
