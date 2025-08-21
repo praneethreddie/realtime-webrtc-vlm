@@ -1,6 +1,6 @@
 # Object Detection Benchmark Report
 
-Generated: 2025-08-21 07:49:57
+Generated: 2025-08-21 09:10:09
 
 ## Executive Summary
 
@@ -8,8 +8,8 @@ Generated: 2025-08-21 07:49:57
 
 | Backend | Avg Latency (ms) | Processing FPS | Frame Drop Rate | Bandwidth (Mbps) | CPU Usage (%) |
 |---------|------------------|----------------|-----------------|------------------|---------------|
-| Python | 0.00 | 0.48 | 100.00% | 1.41 | 23.2 |
-| Javascript | 53.77 | 10.21 | 0.00% | 0.20 | 12.9 |
+| Python | 0.00 | 0.48 | 100.00% | 0.63 | 36.0 |
+| Javascript | 51.11 | 10.15 | 0.00% | 0.16 | 15.6 |
 
 ## Detailed Metrics
 
@@ -28,8 +28,8 @@ Generated: 2025-08-21 07:49:57
 - Frame Drop Rate: 100.00%
 
 #### Resource Usage
-- CPU Usage: 23.2%
-- Memory Usage: 13188.4 MB
+- CPU Usage: 36.0%
+- Memory Usage: 14093.5 MB
 - GPU Usage: 0.0%
 
 #### Detection Quality
@@ -41,20 +41,20 @@ Generated: 2025-08-21 07:49:57
 ### Javascript Backend
 
 #### Latency Metrics
-- Average: 53.77ms
-- Minimum: 50.16ms
-- Maximum: 72.81ms
-- 95th Percentile: 58.87ms
-- 99th Percentile: 60.38ms
+- Average: 51.11ms
+- Minimum: 50.04ms
+- Maximum: 62.26ms
+- 95th Percentile: 52.82ms
+- 99th Percentile: 58.55ms
 
 #### Throughput Metrics
-- Processing FPS: 10.21
-- Display FPS: 10.16
+- Processing FPS: 10.15
+- Display FPS: 9.97
 - Frame Drop Rate: 0.00%
 
 #### Resource Usage
-- CPU Usage: 12.9%
-- Memory Usage: 13314.9 MB
+- CPU Usage: 15.6%
+- Memory Usage: 12846.8 MB
 - GPU Usage: 0.0%
 
 #### Detection Quality
@@ -66,8 +66,8 @@ Generated: 2025-08-21 07:49:57
 ## Recommendations
 
 - **Lowest Latency**: Python (0.00ms)
-- **Highest Throughput**: Javascript (10.21 FPS)
-- **Most Efficient**: Javascript (12.9% CPU)
+- **Highest Throughput**: Javascript (10.15 FPS)
+- **Most Efficient**: Javascript (15.6% CPU)
 
 ### Use Case Recommendations
 
