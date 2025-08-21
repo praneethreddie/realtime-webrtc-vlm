@@ -2,6 +2,10 @@
 
 A real-time object detection system that streams video from your phone to a browser and overlays detection results using WebRTC technology.
 
+## DEMO
+
+https://www.loom.com/share/229129e104304297b7e1c12c9b277f70?sid=2474581e-5724-4160-a604-d04be4db8810
+
 ## Features
 
 - **Real-time Video Streaming**: Stream video from your phone camera to any browser
