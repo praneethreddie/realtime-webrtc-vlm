@@ -13,8 +13,9 @@ A real-time object detection system that streams video from your phone to a brow
 
 ## Quick Start
 
+```bash
 run start.bat file in windows platform.
-
+```
 it runs every thing use cloudflare tunneled url to acces the output
 
 ### One-Command Start (Docker)
